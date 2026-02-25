@@ -18,7 +18,10 @@ type MembershipRow = {
   group_id: string;
   role: "owner" | "admin" | "member";
   balance: number;
-  groups: { id: string; name: string; invite_code: string };
+  groups:
+    | { id: string; name: string; invite_code: string }
+    | Array<{ id: string; name: string; invite_code: string }>
+    | null;
 };
 
 type MarketRow = {
@@ -53,6 +56,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
 
   if (!membership) return notFound();
   const member = membership as MembershipRow;
+  const groupInfo = Array.isArray(member.groups) ? member.groups[0] : member.groups;
 
   const { data: events } = await supabase
     .from("events")
@@ -77,13 +81,13 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{membership.groups.name}</h1>
+          <h1 className="text-2xl font-semibold">{groupInfo?.name ?? "Group"}</h1>
           <p className="text-sm text-muted-foreground">
-            Invite code: <span className="font-mono">{membership.groups.invite_code}</span>
+            Invite code: <span className="font-mono">{groupInfo?.invite_code ?? "N/A"}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {(membership.role === "owner" || membership.role === "admin") && (
+          {(member.role === "owner" || member.role === "admin") && (
             <Link href={`/groups/${params.groupId}/admin`}>
               <Button variant="outline" size="sm">
                 Admin
