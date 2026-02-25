@@ -1,0 +1,3 @@
+-- Optional seed placeholders.
+-- Users are created through Supabase Auth (Google OAuth).
+-- Create groups/events from the UI after sign-in.
