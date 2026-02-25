@@ -1,6 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 
+type BetRow = {
+  id: string;
+  amount: number;
+  selection: string;
+  created_at: string;
+  result: "pending" | "won" | "lost" | "void";
+  markets: { question: string | null } | null;
+  groups: { name: string | null } | null;
+};
+
 export default async function HistoryPage() {
   const supabase = createClient();
   const {
@@ -14,6 +24,8 @@ export default async function HistoryPage() {
     .order("created_at", { ascending: false })
     .limit(100);
 
+  const rows = (bets as BetRow[] | null) ?? [];
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Bet History</h1>
@@ -22,7 +34,7 @@ export default async function HistoryPage() {
           <CardTitle>Your latest bets</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {(bets ?? []).map((bet: any) => (
+          {rows.map((bet) => (
             <div key={bet.id} className="rounded-md border p-3 text-sm">
               <p className="font-medium">{bet.markets?.question}</p>
               <p className="text-muted-foreground">

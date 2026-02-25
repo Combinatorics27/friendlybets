@@ -7,6 +7,12 @@ type DayPoint = {
   total: number;
 };
 
+type LedgerRow = {
+  amount: number;
+  kind: "bet" | "payout" | "adjustment";
+  created_at: string;
+};
+
 export default async function AnalyticsPage() {
   const supabase = createClient();
   const {
@@ -19,11 +25,12 @@ export default async function AnalyticsPage() {
     .eq("user_id", user!.id)
     .order("created_at", { ascending: true });
 
+  const rows = (ledger as LedgerRow[] | null) ?? [];
   const dailyTotals = new Map<string, number>();
 
-  (ledger ?? [])
-    .filter((l: any) => l.kind === "bet")
-    .forEach((entry: any) => {
+  rows
+    .filter((l) => l.kind === "bet")
+    .forEach((entry) => {
       const day = new Date(entry.created_at).toISOString().slice(0, 10);
       dailyTotals.set(day, (dailyTotals.get(day) ?? 0) + Number(entry.amount));
     });
@@ -33,13 +40,13 @@ export default async function AnalyticsPage() {
     total
   }));
 
-  const totalBet = (ledger ?? [])
-    .filter((l: any) => l.kind === "bet")
-    .reduce((sum: number, l: any) => sum + Number(l.amount), 0);
+  const totalBet = rows
+    .filter((l) => l.kind === "bet")
+    .reduce((sum, l) => sum + Number(l.amount), 0);
 
-  const totalPayout = (ledger ?? [])
-    .filter((l: any) => l.kind === "payout")
-    .reduce((sum: number, l: any) => sum + Number(l.amount), 0);
+  const totalPayout = rows
+    .filter((l) => l.kind === "payout")
+    .reduce((sum, l) => sum + Number(l.amount), 0);
 
   return (
     <div className="space-y-4">

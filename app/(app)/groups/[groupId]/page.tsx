@@ -14,6 +14,30 @@ type GroupPageProps = {
   };
 };
 
+type MembershipRow = {
+  group_id: string;
+  role: "owner" | "admin" | "member";
+  balance: number;
+  groups: { id: string; name: string; invite_code: string };
+};
+
+type MarketRow = {
+  id: string;
+  question: string;
+  option_a: string;
+  option_b: string;
+  closes_at: string;
+  status: "open" | "settled" | "cancelled";
+  winning_selection: string | null;
+};
+
+type EventRow = {
+  id: string;
+  title: string;
+  created_at: string;
+  markets: MarketRow[] | null;
+};
+
 export default async function GroupPage({ params, searchParams }: GroupPageProps) {
   const supabase = createClient();
   const {
@@ -28,12 +52,15 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
     .single();
 
   if (!membership) return notFound();
+  const member = membership as MembershipRow;
 
   const { data: events } = await supabase
     .from("events")
     .select("id, title, created_at, markets(id, question, option_a, option_b, closes_at, status, winning_selection)")
     .eq("group_id", params.groupId)
     .order("created_at", { ascending: false });
+
+  const eventRows = (events as EventRow[] | null) ?? [];
 
   return (
     <div className="space-y-6">
@@ -64,7 +91,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
             </Link>
           )}
           <p className="rounded-md border px-3 py-2 text-sm">
-            Wallet: <span className="font-semibold">{membership.balance}</span> pts
+            Wallet: <span className="font-semibold">{member.balance}</span> pts
           </p>
         </div>
       </div>
@@ -90,13 +117,13 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
       </Card>
 
       <div className="space-y-4">
-        {(events ?? []).map((event: any) => (
+        {eventRows.map((event) => (
           <Card key={event.id}>
             <CardHeader>
               <CardTitle>{event.title}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(event.markets ?? []).map((market: any) => (
+              {(event.markets ?? []).map((market) => (
                 <div key={market.id} className="rounded-lg border p-4">
                   <p className="font-medium">{market.question}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -126,7 +153,7 @@ export default async function GroupPage({ params, searchParams }: GroupPageProps
                     </p>
                   )}
 
-                  {(membership.role === "owner" || membership.role === "admin") &&
+                  {(member.role === "owner" || member.role === "admin") &&
                   market.status === "open" ? (
                     <form action={settleMarket} className="mt-3 grid gap-2 md:grid-cols-4">
                       <input type="hidden" name="group_id" value={params.groupId} />

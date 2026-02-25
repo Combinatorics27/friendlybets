@@ -5,6 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 
+type MembershipRow = {
+  group_id: string;
+  role: "owner" | "admin" | "member";
+  balance: number;
+};
+
+type GroupRow = {
+  id: string;
+  name: string;
+  invite_code: string;
+};
+
 type DashboardPageProps = {
   searchParams?: {
     error?: string;
@@ -23,15 +35,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .select("group_id, role, balance")
     .eq("user_id", user!.id);
 
-  const groupIds = (memberships ?? []).map((m: any) => m.group_id);
+  const membershipRows = (memberships as MembershipRow[] | null) ?? [];
+  const groupIds = membershipRows.map((m) => m.group_id);
   const { data: groups, error: groupsError } = groupIds.length
     ? await supabase
         .from("groups")
         .select("id, name, invite_code")
         .in("id", groupIds)
-    : { data: [] as any[], error: null as any };
+    : { data: [] as GroupRow[], error: null };
 
-  const groupsById = new Map((groups ?? []).map((g: any) => [g.id, g]));
+  const groupRows = (groups as GroupRow[] | null) ?? [];
+  const groupsById = new Map(groupRows.map((g) => [g.id, g]));
 
   return (
     <div className="space-y-6">
@@ -91,7 +105,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Current Groups</h2>
-        {(memberships ?? []).length === 0 ? (
+        {membershipRows.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-sm text-muted-foreground">
               You are not in any group yet. Create one or join with an invite code.
@@ -99,7 +113,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {(memberships ?? []).map((m: any) => {
+            {membershipRows.map((m) => {
               const group = groupsById.get(m.group_id);
               return (
                 <Card key={m.group_id}>

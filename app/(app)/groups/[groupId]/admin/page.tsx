@@ -8,6 +8,36 @@ type GroupAdminPageProps = {
   params: { groupId: string };
 };
 
+type MembershipRow = {
+  role: "owner" | "admin" | "member";
+  groups: { id: string; name: string };
+};
+
+type SettledMarketRow = {
+  id: string;
+  question: string;
+  option_a: string;
+  option_b: string;
+  winning_selection: string | null;
+  status: "settled";
+  closes_at: string;
+  events: { title: string; group_id: string } | null;
+};
+
+type LedgerRow = {
+  id: string;
+  kind: "bet" | "payout" | "adjustment";
+  amount: number;
+  note: string | null;
+  created_at: string;
+  user_id: string;
+};
+
+type ProfileRow = {
+  id: string;
+  display_name: string;
+};
+
 export default async function GroupAdminPage({ params }: GroupAdminPageProps) {
   const supabase = createClient();
   const {
@@ -22,7 +52,8 @@ export default async function GroupAdminPage({ params }: GroupAdminPageProps) {
     .single();
 
   if (!membership) return notFound();
-  if (membership.role !== "owner" && membership.role !== "admin") return notFound();
+  const member = membership as MembershipRow;
+  if (member.role !== "owner" && member.role !== "admin") return notFound();
 
   const { data: settledMarkets } = await supabase
     .from("markets")
@@ -40,17 +71,19 @@ export default async function GroupAdminPage({ params }: GroupAdminPageProps) {
     .order("created_at", { ascending: false })
     .limit(200);
 
-  const userIds = Array.from(new Set((ledgerRows ?? []).map((row: any) => row.user_id)));
+  const settled = (settledMarkets as SettledMarketRow[] | null) ?? [];
+  const ledger = (ledgerRows as LedgerRow[] | null) ?? [];
+  const userIds = Array.from(new Set(ledger.map((row) => row.user_id)));
   const { data: profiles } = userIds.length
     ? await supabase.from("profiles").select("id, display_name").in("id", userIds)
-    : { data: [] as any[] };
-  const profileById = new Map((profiles ?? []).map((p: any) => [p.id, p.display_name]));
+    : { data: [] as ProfileRow[] };
+  const profileById = new Map(((profiles as ProfileRow[] | null) ?? []).map((p) => [p.id, p.display_name]));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{membership.groups.name} Admin</h1>
+          <h1 className="text-2xl font-semibold">{member.groups.name} Admin</h1>
           <p className="text-sm text-muted-foreground">Audit settled markets and ledger entries.</p>
         </div>
         <Link href={`/groups/${params.groupId}`}>
@@ -64,10 +97,10 @@ export default async function GroupAdminPage({ params }: GroupAdminPageProps) {
           <CardDescription>Recent outcomes for this group.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {(settledMarkets ?? []).length === 0 ? (
+          {settled.length === 0 ? (
             <p className="text-sm text-muted-foreground">No settled markets yet.</p>
           ) : (
-            settledMarkets.map((market: any) => (
+            settled.map((market) => (
               <div key={market.id} className="rounded-md border p-3 text-sm">
                 <p className="font-medium">{market.question}</p>
                 <p className="text-muted-foreground">{market.events?.title ?? "Unknown event"}</p>
@@ -86,10 +119,10 @@ export default async function GroupAdminPage({ params }: GroupAdminPageProps) {
           <CardDescription>Latest balance movements in this group.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {(ledgerRows ?? []).length === 0 ? (
+          {ledger.length === 0 ? (
             <p className="text-sm text-muted-foreground">No ledger entries yet.</p>
           ) : (
-            ledgerRows.map((row: any) => (
+            ledger.map((row) => (
               <div key={row.id} className="rounded-md border p-3 text-sm">
                 <p className="font-medium">
                   {row.kind} | {row.amount} pts
