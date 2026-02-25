@@ -14,12 +14,14 @@ export async function signInWithGoogle() {
   });
 
   if (error) {
-    return { error: error.message };
+    redirect(`/?error=${encodeURIComponent(error.message)}`);
   }
 
   if (data.url) {
     redirect(data.url);
   }
+
+  redirect("/?error=Failed%20to%20start%20Google%20sign-in");
 }
 
 export async function signOut() {
