@@ -10,7 +10,7 @@ type GroupAdminPageProps = {
 
 type MembershipRow = {
   role: "owner" | "admin" | "member";
-  groups: { id: string; name: string };
+  groups: { id: string; name: string } | Array<{ id: string; name: string }> | null;
 };
 
 type SettledMarketRow = {
@@ -54,6 +54,7 @@ export default async function GroupAdminPage({ params }: GroupAdminPageProps) {
   if (!membership) return notFound();
   const member = membership as MembershipRow;
   if (member.role !== "owner" && member.role !== "admin") return notFound();
+  const groupInfo = Array.isArray(member.groups) ? member.groups[0] : member.groups;
 
   const { data: settledMarkets } = await supabase
     .from("markets")
@@ -83,7 +84,7 @@ export default async function GroupAdminPage({ params }: GroupAdminPageProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{member.groups.name} Admin</h1>
+          <h1 className="text-2xl font-semibold">{groupInfo?.name ?? "Group"} Admin</h1>
           <p className="text-sm text-muted-foreground">Audit settled markets and ledger entries.</p>
         </div>
         <Link href={`/groups/${params.groupId}`}>
